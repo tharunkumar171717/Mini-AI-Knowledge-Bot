@@ -1,7 +1,7 @@
 from app.database.connection import get_pool
 
-# 384 = output size of sentence-transformers/all-MiniLM-L6-v2.
-# Changing EMBEDDING_MODEL to one with another size means changing this and re-embedding.
+# Gemini embeddings are requested at this size (output_dimensionality).
+# Changing it or EMBEDDING_MODEL means altering the column and re-embedding (scripts/reembed.py).
 EMBEDDING_DIM = 384
 
 # Tables are prefixed kb_ because this Supabase database is shared with PaperTrail,

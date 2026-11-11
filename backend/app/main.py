@@ -1,5 +1,4 @@
 import logging
-import threading
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
@@ -9,7 +8,6 @@ from app.core.config import get_settings
 from app.database.connection import check_database, close_pool, open_pool
 from app.database.schema import init_schema
 from app.routes import chat_routes, document_routes
-from app.services.embeddings import warm_up
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s:     %(name)s - %(message)s")
 
@@ -18,8 +16,6 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s:     %(name)s - %(
 async def lifespan(app: FastAPI):
     open_pool()
     init_schema()
-    # Load the embedding model in the background so the server starts at once.
-    threading.Thread(target=warm_up, daemon=True).start()
     yield
     close_pool()
 

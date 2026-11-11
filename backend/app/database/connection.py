@@ -24,8 +24,9 @@ def close_pool() -> None:
 
 
 def get_pool() -> ConnectionPool:
+    # Opened on first use as well as at startup, for hosts that skip the ASGI lifespan (serverless).
     if _pool is None:
-        raise RuntimeError("Database pool is not open")
+        open_pool()
     return _pool
 
 

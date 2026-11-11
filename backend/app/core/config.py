@@ -1,3 +1,4 @@
+import os
 from functools import lru_cache
 from pathlib import Path
 
@@ -21,7 +22,7 @@ class Settings(BaseSettings):
     # A PDF page with fewer characters than this in its text layer is treated as scanned and OCR'd.
     ocr_min_chars: int = 50
 
-    embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
+    embedding_model: str = "gemini-embedding-001"
     max_upload_mb: int = 20
     chunk_size: int = 800
     chunk_overlap: int = 150
@@ -29,7 +30,9 @@ class Settings(BaseSettings):
 
     cors_origins: list[str] = ["http://localhost:5174"]
 
-    documents_dir: Path = BASE_DIR / "documents"
+    # Vercel functions can only write to /tmp, which lasts for one invocation; that is enough
+    # because a file is only read while it is being indexed, in the same request.
+    documents_dir: Path = Path("/tmp/documents") if os.environ.get("VERCEL") else BASE_DIR / "documents"
 
 
 @lru_cache

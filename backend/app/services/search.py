@@ -7,7 +7,7 @@ from app.services.embeddings import embed, to_pgvector
 
 def search_chunks(question: str, top_k: int) -> list[Source]:
     """The top_k chunks closest to the question by cosine similarity, from completed documents only."""
-    vector = to_pgvector(embed([question])[0])
+    vector = to_pgvector(embed([question], task_type="RETRIEVAL_QUERY")[0])
     with get_pool().connection() as conn:
         cur = conn.cursor(row_factory=class_row(Source))
         return cur.execute(

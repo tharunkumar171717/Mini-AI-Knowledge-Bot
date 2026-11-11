@@ -1,45 +1,43 @@
 import logging
-import threading
-import time
-from functools import lru_cache
+import math
 
-from sentence_transformers import SentenceTransformer
+from google.genai import types
 
 from app.core.config import get_settings
+from app.database.schema import EMBEDDING_DIM
+from app.services import gemini
 
 logger = logging.getLogger(__name__)
-_load_lock = threading.Lock()
+
+# Gemini accepts up to 100 texts per embed request.
+BATCH_SIZE = 100
 
 
-@lru_cache
-def _cached_model() -> SentenceTransformer:
-    name = get_settings().embedding_model
-    try:
-        # Use the Hugging Face cache without a network check when the model is already downloaded.
-        return SentenceTransformer(name, local_files_only=True)
-    except Exception:
-        return SentenceTransformer(name)
+def _normalize(vector: list[float]) -> list[float]:
+    # Gemini only returns unit-length vectors at full size; truncated ones must be rescaled.
+    norm = math.sqrt(sum(x * x for x in vector)) or 1.0
+    return [x / norm for x in vector]
 
 
-def _model() -> SentenceTransformer:
-    # The lock makes a request that arrives during warm-up wait for it instead of loading a second copy.
-    with _load_lock:
-        return _cached_model()
+def embed(texts: list[str], task_type: str = "RETRIEVAL_DOCUMENT") -> list[list[float]]:
+    """Unit-length embeddings from Gemini, so cosine similarity is a plain dot product.
 
-
-def warm_up() -> None:
-    start = time.perf_counter()
-    try:
-        embed(["warm up"])
-        logger.info("Embedding model ready in %.1fs", time.perf_counter() - start)
-    except Exception:
-        logger.exception("Embedding model failed to load; it will be retried on first use")
-
-
-def embed(texts: list[str]) -> list[list[float]]:
-    """Unit-length embeddings, so cosine similarity is a plain dot product."""
-    vectors = _model().encode(texts, normalize_embeddings=True, batch_size=32)
-    return vectors.tolist()
+    Use task_type="RETRIEVAL_QUERY" for questions and the default for document chunks.
+    """
+    config = types.EmbedContentConfig(output_dimensionality=EMBEDDING_DIM, task_type=task_type)
+    model = get_settings().embedding_model
+    vectors: list[list[float]] = []
+    for start in range(0, len(texts), BATCH_SIZE):
+        try:
+            response = gemini.client().models.embed_content(
+                model=model, contents=texts[start:start + BATCH_SIZE], config=config
+            )
+        except gemini.GeminiError:
+            raise
+        except Exception as exc:
+            raise gemini.GeminiError(f"Embedding request failed: {exc}") from exc
+        vectors.extend(_normalize(e.values) for e in response.embeddings)
+    return vectors
 
 
 def to_pgvector(vector: list[float]) -> str:

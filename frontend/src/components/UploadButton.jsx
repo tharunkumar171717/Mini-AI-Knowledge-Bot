@@ -1,7 +1,8 @@
 import { useRef, useState } from "react";
 import { Upload } from "lucide-react";
 
-const MAX_MB = 20;
+// Keep in line with the backend MAX_UPLOAD_MB (4 on Vercel, which caps request bodies at 4.5 MB).
+const MAX_MB = Number(import.meta.env.VITE_MAX_UPLOAD_MB ?? 20);
 const ALLOWED = /\.(pdf|png|jpe?g|txt|md)$/i;
 
 export default function UploadButton({ onUpload, onError }) {

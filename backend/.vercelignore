@@ -1,0 +1,5 @@
+documents/
+samples/
+scripts/
+.env
+__pycache__/

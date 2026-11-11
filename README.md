@@ -5,7 +5,7 @@ retrieved from your documents, and cite the file name and page.
 
 ```
 upload → text layer (PyMuPDF) or Gemini OCR for scanned pages / images → chunks
-       → Sentence Transformers embeddings → Supabase Postgres + pgvector
+       → Gemini embeddings (384-dim) → Supabase Postgres + pgvector
 question → embedding → cosine similarity search (top-K) → Gemini → answer + sources
 ```
 
@@ -24,6 +24,8 @@ Mini-AI-Knowledge-Bot/
       models/              request/response schemas
       routes/              document_routes.py (/api/documents), chat_routes.py (/api/chat)
       services/            extraction (OCR), chunking, embeddings, search, llm, gemini client
+    scripts/reembed.py     re-embed all chunks after changing EMBEDDING_MODEL
+    index.py               Vercel entry point
     documents/             uploaded files (git-ignored)
     samples/               sample payoff statement and knowledge.txt
     requirements.txt
@@ -69,6 +71,22 @@ npm run dev          # http://localhost:5174
 ```
 
 API docs: http://localhost:8001/docs
+
+## Deploy (Vercel)
+
+Two Vercel projects, both deployed from their folder with `vercel deploy --prod`:
+
+| Folder | Project | URL |
+| --- | --- | --- |
+| `backend/` | `mini-ai-knowledge-bot-api` | https://mini-ai-knowledge-bot-api.vercel.app |
+| `frontend/` | `mini-ai-knowledge-bot` | https://mini-ai-knowledge-bot.vercel.app |
+
+The backend project has the same variables as `backend/.env`, with `MAX_UPLOAD_MB=4` (Vercel rejects
+request bodies over 4.5 MB) and `CORS_ORIGINS` including the frontend URL. The frontend project sets
+`VITE_API_BASE_URL` to the backend URL and `VITE_MAX_UPLOAD_MB=4`.
+
+Uploaded files are written to `/tmp` on Vercel and only kept for the request that indexes them;
+the extracted text and embeddings live in Postgres.
 
 ## API
 

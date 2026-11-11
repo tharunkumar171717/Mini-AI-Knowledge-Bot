@@ -3,7 +3,5 @@ uvicorn[standard]
 python-multipart
 pydantic-settings
 psycopg[binary,pool]
-numpy
 pymupdf
-sentence-transformers
 google-genai

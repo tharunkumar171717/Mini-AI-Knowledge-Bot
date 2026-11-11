@@ -14,11 +14,6 @@ logger = logging.getLogger(__name__)
 
 _COLUMNS = "id, filename, mime_type, status, page_count, ocr_pages, error, created_at"
 
-_EXTENSIONS = {"application/pdf": ".pdf", "image/png": ".png", "image/jpeg": ".jpg", "text/plain": ".txt"}
-
-
-def stored_path(document_id: UUID, mime_type: str):
-    return get_settings().documents_dir / f"{document_id}{_EXTENSIONS[mime_type]}"
 
 
 def get_document(document_id: UUID) -> Document | None:
@@ -34,28 +29,34 @@ def list_documents() -> list[Document]:
 
 
 def delete_document(document_id: UUID) -> bool:
-    """Delete the document, its chunks (via cascade) and its stored file. Returns False if it didn't exist."""
+    """Delete the document, its file and its chunks (via cascade). Returns False if it didn't exist."""
+    with get_pool().connection() as conn:
+        row = conn.execute("delete from kb_documents where id = %s returning id", (document_id,)).fetchone()
+    return row is not None
+
+
+def get_file(document_id: UUID) -> tuple[str, str, bytes] | None:
+    """(filename, mime_type, content) of the original upload, or None if missing."""
     with get_pool().connection() as conn:
         row = conn.execute(
-            "delete from kb_documents where id = %s returning mime_type", (document_id,)
+            "select filename, mime_type, content from kb_documents where id = %s", (document_id,)
         ).fetchone()
-    if row is None:
-        return False
-    stored_path(document_id, row[0]).unlink(missing_ok=True)
-    return True
+    if row is None or row[2] is None:
+        return None
+    return row[0], row[1], bytes(row[2])
 
 
 def create_document(filename: str, mime_type: str, content: bytes) -> UUID:
-    """Insert a 'processing' row and save the file to disk."""
+    """Insert a 'processing' row holding the original file.
+
+    The file lives in Postgres rather than on disk because serverless hosts (Vercel) have no
+    persistent disk; uploads are capped at MAX_UPLOAD_MB, so rows stay small.
+    """
     with get_pool().connection() as conn:
-        document_id = conn.execute(
-            "insert into kb_documents (filename, mime_type) values (%s, %s) returning id",
-            (filename, mime_type),
+        return conn.execute(
+            "insert into kb_documents (filename, mime_type, content) values (%s, %s, %s) returning id",
+            (filename, mime_type, content),
         ).fetchone()[0]
-    path = stored_path(document_id, mime_type)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(content)
-    return document_id
 
 
 def ingest_document(document_id: UUID, mime_type: str) -> None:
@@ -66,7 +67,10 @@ def ingest_document(document_id: UUID, mime_type: str) -> None:
     """
     settings = get_settings()
     try:
-        extracted = extract(stored_path(document_id, mime_type), mime_type)
+        stored = get_file(document_id)
+        if stored is None:
+            raise ValueError("The uploaded file is missing.")
+        extracted = extract(stored[2], mime_type)
 
         rows = []  # (page, chunk_index, content)
         for page, text in extracted.pages:

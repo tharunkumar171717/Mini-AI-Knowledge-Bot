@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from pydantic import BaseModel, Field
 
 
@@ -7,6 +9,7 @@ class ChatRequest(BaseModel):
 
 
 class Source(BaseModel):
+    document_id: UUID
     filename: str
     page: int
     content: str

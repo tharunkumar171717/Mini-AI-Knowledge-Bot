@@ -1,4 +1,3 @@
-import os
 from functools import lru_cache
 from pathlib import Path
 
@@ -29,10 +28,6 @@ class Settings(BaseSettings):
     top_k: int = 5
 
     cors_origins: list[str] = ["http://localhost:5174"]
-
-    # Vercel functions can only write to /tmp, which lasts for one invocation; that is enough
-    # because a file is only read while it is being indexed, in the same request.
-    documents_dir: Path = Path("/tmp/documents") if os.environ.get("VERCEL") else BASE_DIR / "documents"
 
 
 @lru_cache

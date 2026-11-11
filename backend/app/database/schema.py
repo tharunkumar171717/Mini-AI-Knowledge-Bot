@@ -21,6 +21,9 @@ create table if not exists kb_documents (
     created_at  timestamptz not null default now()
 );
 
+-- The original upload, served back by GET /api/documents/{id}/file.
+alter table kb_documents add column if not exists content bytea;
+
 create table if not exists kb_chunks (
     id           bigserial primary key,
     document_id  uuid not null references kb_documents(id) on delete cascade,

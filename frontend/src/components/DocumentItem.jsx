@@ -1,5 +1,6 @@
 import { FileImage, FileText, ScanText, Trash2 } from "lucide-react";
 import StatusBadge from "./StatusBadge";
+import { documentFileUrl } from "../api/client";
 
 export default function DocumentItem({ document, onDelete }) {
   const Icon = document.mime_type?.startsWith("image/") ? FileImage : FileText;
@@ -12,9 +13,15 @@ export default function DocumentItem({ document, onDelete }) {
     <li className="group flex items-start gap-2 rounded-md px-2 py-2 hover:bg-white">
       <Icon size={16} className="mt-0.5 shrink-0 text-gray-400" />
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm" title={document.filename}>
+        <a
+          href={documentFileUrl(document.id)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block truncate text-sm hover:text-blue-600 hover:underline"
+          title={`Open ${document.filename}`}
+        >
           {document.filename}
-        </p>
+        </a>
         <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-gray-500">
           <StatusBadge status={document.status} />
           {document.page_count != null && (

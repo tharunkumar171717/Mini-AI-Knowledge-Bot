@@ -7,7 +7,6 @@ payoff statements.
 
 import logging
 from dataclasses import dataclass
-from pathlib import Path
 
 import pymupdf
 from google.genai import types
@@ -46,28 +45,28 @@ def ocr_image(image_bytes: bytes, mime_type: str) -> str:
     )
 
 
-def _extract_pdf(path: Path) -> Extracted:
+def _extract_pdf(content: bytes) -> Extracted:
     min_chars = get_settings().ocr_min_chars
     result = Extracted(pages=[])
-    with pymupdf.open(path) as doc:
+    with pymupdf.open(stream=content, filetype="pdf") as doc:
         for number, page in enumerate(doc, start=1):
             text = page.get_text()
             if len(text.strip()) < min_chars:
                 png = page.get_pixmap(matrix=pymupdf.Matrix(2, 2)).tobytes("png")
                 text = ocr_image(png, "image/png")
                 result.ocr_pages += 1
-                logger.info("%s p.%d: OCR'd (%d chars)", path.name, number, len(text))
+                logger.info("p.%d: OCR'd (%d chars)", number, len(text))
             result.pages.append((number, text))
     return result
 
 
-def extract(path: Path, mime_type: str) -> Extracted:
+def extract(content: bytes, mime_type: str) -> Extracted:
     if mime_type == PDF:
-        return _extract_pdf(path)
+        return _extract_pdf(content)
     if mime_type in IMAGE_TYPES:
-        return Extracted(pages=[(1, ocr_image(path.read_bytes(), mime_type))], ocr_pages=1)
+        return Extracted(pages=[(1, ocr_image(content, mime_type))], ocr_pages=1)
     if mime_type == TEXT:
-        return Extracted(pages=[(1, path.read_text(encoding="utf-8", errors="replace"))])
+        return Extracted(pages=[(1, content.decode("utf-8", errors="replace"))])
     raise ValueError(f"Unsupported file type: {mime_type}")
 
 

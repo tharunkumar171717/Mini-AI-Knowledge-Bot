@@ -1,5 +1,7 @@
 from uuid import UUID
 
+from urllib.parse import quote
+
 from fastapi import APIRouter, BackgroundTasks, File, HTTPException, Response, UploadFile
 
 from app.core.config import get_settings
@@ -21,6 +23,21 @@ def get_document(document_id: UUID) -> Document:
     if document is None:
         raise HTTPException(status_code=404, detail="Document not found")
     return document
+
+
+@router.get("/{document_id}/file")
+def get_document_file(document_id: UUID) -> Response:
+    """The original uploaded file, shown inline in the browser (PDF viewer, image, text)."""
+    stored = service.get_file(document_id)
+    if stored is None:
+        raise HTTPException(status_code=404, detail="File not found")
+    filename, mime_type, content = stored
+    media_type = "text/plain; charset=utf-8" if mime_type == "text/plain" else mime_type
+    return Response(
+        content,
+        media_type=media_type,
+        headers={"Content-Disposition": f"inline; filename*=UTF-8''{quote(filename)}"},
+    )
 
 
 @router.post("/upload", response_model=Document, status_code=202)

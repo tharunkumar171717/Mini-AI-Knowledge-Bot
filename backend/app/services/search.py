@@ -12,7 +12,7 @@ def search_chunks(question: str, top_k: int) -> list[Source]:
         cur = conn.cursor(row_factory=class_row(Source))
         return cur.execute(
             """
-            select d.filename, c.page, c.content,
+            select c.document_id, d.filename, c.page, c.content,
                    1 - (c.embedding <=> %(v)s::vector) as score
             from kb_chunks c
             join kb_documents d on d.id = c.document_id

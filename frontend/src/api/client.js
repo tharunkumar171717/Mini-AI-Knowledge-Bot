@@ -23,6 +23,12 @@ export async function listDocuments() {
   return data;
 }
 
+// Opens in a new tab; `page` jumps to that page in the browser's PDF viewer.
+export function documentFileUrl(documentId, page) {
+  const url = `${api.defaults.baseURL}/api/documents/${documentId}/file`;
+  return page ? `${url}#page=${page}` : url;
+}
+
 export async function uploadDocument(file) {
   const form = new FormData();
   form.append("file", file);

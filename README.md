@@ -26,7 +26,6 @@ Mini-AI-Knowledge-Bot/
       services/            extraction (OCR), chunking, embeddings, search, llm, gemini client
     scripts/reembed.py     re-embed all chunks after changing EMBEDDING_MODEL
     index.py               Vercel entry point
-    documents/             uploaded files (git-ignored)
     samples/               sample payoff statement and knowledge.txt
     requirements.txt
     .env.example
@@ -85,8 +84,7 @@ The backend project has the same variables as `backend/.env`, with `MAX_UPLOAD_M
 request bodies over 4.5 MB) and `CORS_ORIGINS` including the frontend URL. The frontend project sets
 `VITE_API_BASE_URL` to the backend URL and `VITE_MAX_UPLOAD_MB=4`.
 
-Uploaded files are written to `/tmp` on Vercel and only kept for the request that indexes them;
-the extracted text and embeddings live in Postgres.
+Uploaded files are stored in Postgres (`kb_documents.content`), since Vercel has no persistent disk.
 
 ## API
 
@@ -95,9 +93,10 @@ the extracted text and embeddings live in Postgres.
 | GET | `/health` | | database and pgvector status |
 | GET | `/api/documents` | | list of documents |
 | GET | `/api/documents/{id}` | | one document |
+| GET | `/api/documents/{id}/file` | | the original file, shown inline |
 | POST | `/api/documents/upload` | multipart `file` | the document, status `processing` (indexed in the background) |
 | DELETE | `/api/documents/{id}` | | 204 |
 | POST | `/api/chat` | `{"question": "...", "top_k": 5}` | `{"answer": "...", "sources": [...]}` |
 
 Document: `{"id", "filename", "mime_type", "status", "page_count", "ocr_pages", "error", "created_at"}`.
-Source: `{"filename", "page", "content", "score"}`.
+Source: `{"document_id", "filename", "page", "content", "score"}`.

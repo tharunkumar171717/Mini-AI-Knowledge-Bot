@@ -1,0 +1,8 @@
+Python is a high-level programming language.
+Python was created by Guido van Rossum.
+Python was first released in 1991.
+Python supports object-oriented programming.
+FastAPI is a modern Python web framework.
+FastAPI is used to build APIs.
+React is a JavaScript library.
+Node.js allows JavaScript to run outside the browser.
